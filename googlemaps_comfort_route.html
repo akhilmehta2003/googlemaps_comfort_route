@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Google Maps – Comfort Route Feature</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --g-blue:#1A73E8;
+  --g-blue-dark:#1557B0;
+  --g-blue-light:#E8F0FE;
+  --g-green:#0F9D58;
+  --g-green-light:#E6F4EA;
+  --g-red:#D93025;
+  --g-red-light:#FCE8E6;
+  --g-yellow:#F9AB00;
+  --g-yellow-light:#FEF7E0;
+  --g-orange:#E8710A;
+  --g-purple:#9334E6;
+  --g-teal:#00897B;
+  --g-teal-light:#E0F2F1;
+  --comfort:#00897B;
+  --comfort-light:#E0F2F1;
+  --comfort-dark:#00695C;
+  --g-gray-900:#202124;
+  --g-gray-700:#3C4043;
+  --g-gray-500:#5F6368;
+  --g-gray-300:#BDC1C6;
+  --g-gray-200:#DADCE0;
+  --g-gray-100:#F1F3F4;
+  --g-gray-50:#F8F9FA;
+  --g-white:#FFFFFF;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.12),0 1px 2px rgba(0,0,0,0.08);
+  --shadow:0 2px 10px rgba(0,0,0,0.14),0 1px 4px rgba(0,0,0,0.12);
+  --shadow-lg:0 8px 28px rgba(0,0,0,0.18),0 2px 8px rgba(0,0,0,0.12);
+  --font:'Google Sans','Roboto',system-ui,sans-serif;
+  --font-r:'Roboto',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:#1A1A2E;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
+
+/* ── OUTER LAYOUT ── */
+.outer{display:flex;gap:28px;align-items:flex-start;max-width:1380px;width:100%;}
+
+/* ── PHONE FRAME ── */
+.phone-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.phone{
+  width:390px;height:820px;background:#1A1A1A;border-radius:44px;
+  box-shadow:0 0 0 8px #2D2D40,0 0 0 11px #1A1A2E,var(--shadow-lg);
+  overflow:hidden;position:relative;display:flex;flex-direction:column;
+}
+.phone-top-bar{
+  height:44px;background:#1A1A1A;display:flex;align-items:center;
+  justify-content:space-between;padding:0 28px;flex-shrink:0;z-index:10;
+}
+.status-time{font-size:15px;font-weight:700;color:white;letter-spacing:0.3px;}
+.status-icons{display:flex;gap:6px;align-items:center;}
+.status-icons span{font-size:14px;color:white;}
+
+/* ── SCREENS ── */
+.screen{position:absolute;inset:44px 0 0 0;display:none;flex-direction:column;overflow:hidden;}
+.screen.active{display:flex;}
+
+/* ── MAP BACKGROUND ── */
+.map-bg{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(rgba(242,240,233,0.97),rgba(242,240,233,0.97)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23E8E0D0' width='400' height='400'/%3E%3Cline x1='0' y1='80' x2='400' y2='80' stroke='%23D4C9B5' stroke-width='28'/%3E%3Cline x1='0' y1='200' x2='400' y2='200' stroke='%23D4C9B5' stroke-width='20'/%3E%3Cline x1='0' y1='320' x2='400' y2='320' stroke='%23D4C9B5' stroke-width='16'/%3E%3Cline x1='80' y1='0' x2='80' y2='400' stroke='%23D4C9B5' stroke-width='24'/%3E%3Cline x1='200' y1='0' x2='200' y2='400' stroke='%23D4C9B5' stroke-width='18'/%3E%3Cline x1='320' y1='0' x2='320' y2='400' stroke='%23D4C9B5' stroke-width='14'/%3E%3C/svg%3E");
+  background-size:cover;
+  overflow:hidden;
+}
+/* SVG roads on map */
+.map-svg{position:absolute;inset:0;width:100%;height:100%;}
+
+/* ── SCREEN 1: HOME ── */
+.gm-topbar{
+  position:relative;z-index:20;padding:12px 14px 8px;
+  display:flex;gap:10px;align-items:center;
+}
+.gm-search{
+  flex:1;display:flex;align-items:center;gap:10px;
+  background:var(--g-white);border-radius:28px;padding:10px 16px;
+  box-shadow:var(--shadow);cursor:pointer;
+}
+.gm-search-text{font-size:15px;color:var(--g-gray-500);flex:1;}
+.gm-avatar{
+  width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4285F4,#34A853);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  font-weight:700;color:white;flex-shrink:0;cursor:pointer;
+}
+.home-pills{
+  position:relative;z-index:20;display:flex;gap:8px;padding:0 14px 10px;overflow-x:auto;
+}
+.pill{
+  display:flex;align-items:center;gap:6px;background:var(--g-white);
+  border-radius:20px;padding:7px 14px;font-size:13px;font-weight:500;
+  color:var(--g-gray-700);white-space:nowrap;box-shadow:var(--shadow-sm);cursor:pointer;
+  transition:all 0.15s;
+}
+.pill:hover{box-shadow:var(--shadow);}
+.pill-icon{font-size:14px;}
+.home-suggested{
+  position:absolute;bottom:0;left:0;right:0;z-index:20;
+  background:var(--g-white);border-radius:20px 20px 0 0;
+  padding:16px 0 0;box-shadow:0 -2px 12px rgba(0,0,0,0.12);
+  max-height:240px;
+}
+.drag-handle{width:36px;height:4px;background:var(--g-gray-200);border-radius:2px;margin:0 auto 14px;}
+.suggested-title{font-size:13px;font-weight:500;color:var(--g-gray-500);padding:0 16px 10px;}
+.place-row{
+  display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background 0.15s;
+}
+.place-row:hover{background:var(--g-gray-50);}
+.place-icon{
+  width:40px;height:40px;border-radius:50%;background:var(--g-gray-100);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;
+}
+.place-name{font-size:14px;font-weight:500;color:var(--g-gray-900);}
+.place-dist{font-size:12px;color:var(--g-gray-500);margin-top:2px;}
+.fab-layers{
+  position:absolute;right:16px;bottom:260px;z-index:25;
+  width:44px;height:44px;background:var(--g-white);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:var(--shadow);cursor:pointer;
+}
+
+/* ── SCREEN 2: ROUTE OPTIONS ── */
+.route-topbar{
+  position:relative;z-index:20;background:var(--g-white);padding:12px 14px 0;
+  box-shadow:var(--shadow-sm);
+}
+.route-back-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.back-btn{
+  width:36px;height:36px;border-radius:50%;background:none;border:none;
+  font-size:20px;color:var(--g-gray-700);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.route-input-stack{flex:1;display:flex;flex-direction:column;gap:4px;}
+.route-input-row{
+  display:flex;align-items:center;gap:8px;background:var(--g-gray-100);
+  border-radius:8px;padding:7px 12px;
+}
+.ri-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ri-dot.origin{background:var(--g-blue);}
+.ri-dot.dest{background:var(--g-red);}
+.ri-text{font-size:13.5px;font-weight:500;color:var(--g-gray-900);flex:1;}
+.ri-x{font-size:14px;color:var(--g-gray-500);cursor:pointer;background:none;border:none;}
+.transport-tabs{display:flex;gap:0;padding:8px 0 0;}
+.transport-tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 4px;cursor:pointer;border-bottom:2px solid transparent;
+  font-size:10px;color:var(--g-gray-500);transition:all 0.15s;
+}
+.transport-tab.active{border-bottom-color:var(--g-blue);color:var(--g-blue);}
+.transport-tab-icon{font-size:18px;}
+
+/* ── ROUTE CARDS PANEL ── */
+.route-panel{
+  position:absolute;bottom:0;left:0;right:0;z-index:20;
+  background:var(--g-white);border-radius:20px 20px 0 0;
+  max-height:68%;overflow-y:auto;box-shadow:0 -3px 16px rgba(0,0,0,0.15);
+}
+.rp-drag{width:36px;height:4px;background:var(--g-gray-200);border-radius:2px;margin:12px auto 14px;}
+.rp-title-row{display:flex;align-items:center;justify-content:space-between;padding:0 16px 12px;}
+.rp-title{font-size:16px;font-weight:700;color:var(--g-gray-900);}
+.rp-options-link{font-size:13px;color:var(--g-blue);cursor:pointer;font-weight:500;}
+
+/* ── ROUTE CARD ── */
+.route-card{
+  margin:0 12px 10px;border-radius:14px;border:2px solid var(--g-gray-200);
+  overflow:hidden;cursor:pointer;transition:all 0.2s;
+}
+.route-card:hover{border-color:var(--g-blue);box-shadow:var(--shadow-sm);}
+.route-card.selected{border-color:var(--g-blue);box-shadow:0 0 0 3px rgba(26,115,232,0.15);}
+.route-card.comfort-card{border-color:var(--comfort);}
+.route-card.comfort-card.selected{border-color:var(--comfort);box-shadow:0 0 0 3px rgba(0,137,123,0.18);}
+.rc-header{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  border-bottom:1px solid var(--g-gray-100);
+}
+.rc-icon{font-size:20px;width:28px;text-align:center;}
+.rc-label{font-size:13px;font-weight:700;flex:1;}
+.rc-badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.rc-badge-fastest{background:var(--g-blue-light);color:var(--g-blue);}
+.rc-badge-fuel{background:var(--g-green-light);color:var(--g-green);}
+.rc-badge-comfort{background:var(--comfort-light);color:var(--comfort);display:flex;align-items:center;gap:4px;}
+.rc-badge-new{background:var(--g-yellow-light);color:var(--g-orange);font-size:9px;margin-left:4px;padding:2px 6px;border-radius:10px;}
+.rc-body{padding:12px 14px;}
+.rc-time-row{display:flex;align-items:baseline;gap:6px;margin-bottom:8px;}
+.rc-time{font-size:24px;font-weight:700;color:var(--g-gray-900);}
+.rc-time-unit{font-size:14px;color:var(--g-gray-500);}
+.rc-eta{font-size:13px;color:var(--g-gray-500);}
+.rc-detail-row{display:flex;gap:8px;flex-wrap:wrap;}
+.rc-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:500;
+}
+.chip-blue{background:var(--g-blue-light);color:var(--g-blue);}
+.chip-red{background:var(--g-red-light);color:var(--g-red);}
+.chip-green{background:var(--g-green-light);color:var(--g-green);}
+.chip-comfort{background:var(--comfort-light);color:var(--comfort);}
+.chip-yellow{background:var(--g-yellow-light);color:var(--g-orange);}
+.chip-gray{background:var(--g-gray-100);color:var(--g-gray-500);}
+.rc-road-quality{margin-top:10px;}
+.rq-label{font-size:11px;color:var(--g-gray-500);margin-bottom:4px;font-weight:500;}
+.rq-bar-wrap{height:6px;background:var(--g-gray-200);border-radius:99px;overflow:hidden;}
+.rq-bar{height:100%;border-radius:99px;}
+.rc-comfort-details{
+  margin-top:10px;padding:10px;background:var(--comfort-light);border-radius:10px;
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
+}
+.rcd-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--comfort-dark);font-weight:500;}
+.start-btn-row{padding:12px 12px 16px;}
+.start-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;background:var(--g-blue);color:white;border:none;border-radius:28px;
+  padding:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font);
+  box-shadow:0 4px 14px rgba(26,115,232,0.35);transition:all 0.15s;
+}
+.start-btn:hover{background:var(--g-blue-dark);}
+.start-btn.comfort-start{background:var(--comfort);box-shadow:0 4px 14px rgba(0,137,123,0.35);}
+.start-btn.comfort-start:hover{background:var(--comfort-dark);}
+
+/* ── SCREEN 3: NAVIGATION ── */
+.nav-top-bar{
+  position:relative;z-index:20;background:var(--g-gray-900);
+  padding:14px 16px;display:flex;align-items:center;gap:12px;
+}
+.nav-direction-icon{font-size:28px;color:var(--g-yellow);}
+.nav-instruction{flex:1;}
+.nav-inst-main{font-size:17px;font-weight:700;color:white;}
+.nav-inst-sub{font-size:13px;color:rgba(255,255,255,0.70);margin-top:2px;}
+.nav-dist{font-size:16px;font-weight:700;color:white;text-align:right;}
+.comfort-active-bar{
+  position:relative;z-index:20;background:var(--comfort);
+  padding:8px 16px;display:flex;align-items:center;gap:8px;
+}
+.cab-icon{font-size:16px;}
+.cab-text{font-size:13px;font-weight:600;color:white;flex:1;}
+.cab-score{
+  background:rgba(255,255,255,0.20);border-radius:20px;
+  padding:3px 10px;font-size:12px;font-weight:700;color:white;
+}
+.nav-bottom{
+  position:absolute;bottom:0;left:0;right:0;z-index:20;
+  background:var(--g-gray-900);padding:16px;border-radius:20px 20px 0 0;
+}
+.nav-eta-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.nav-eta-main{font-size:26px;font-weight:700;color:white;}
+.nav-eta-sub{font-size:13px;color:rgba(255,255,255,0.65);margin-top:2px;}
+.nav-info-chips{display:flex;gap:8px;margin-bottom:14px;}
+.nav-chip{
+  display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.10);
+  border-radius:20px;padding:5px 12px;font-size:12px;color:rgba(255,255,255,0.85);font-weight:500;
+}
+.nav-actions{display:flex;gap:8px;}
+.nav-action-btn{
+  flex:1;background:rgba(255,255,255,0.10);border:none;border-radius:12px;
+  padding:12px 8px;color:white;font-size:12px;font-weight:600;cursor:pointer;
+  font-family:var(--font);display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.nav-action-btn-icon{font-size:20px;}
+.nav-exit-btn{
+  width:100%;background:rgba(255,255,255,0.12);border:none;border-radius:28px;
+  padding:12px;color:white;font-size:14px;font-weight:600;cursor:pointer;
+  font-family:var(--font);margin-top:10px;
+}
+
+/* ── SCREEN 4: DETAIL ── */
+.detail-header{
+  background:var(--g-white);padding:12px 14px;display:flex;align-items:center;gap:10px;
+  box-shadow:var(--shadow-sm);position:relative;z-index:20;
+}
+.detail-title{font-size:16px;font-weight:700;color:var(--g-gray-900);}
+.detail-sub{font-size:12px;color:var(--g-gray-500);margin-top:2px;}
+.detail-body{flex:1;overflow-y:auto;background:var(--g-gray-50);padding:12px;}
+.detail-section{background:var(--g-white);border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.ds-head{padding:14px 16px;border-bottom:1px solid var(--g-gray-100);display:flex;align-items:center;gap:8px;}
+.ds-title{font-size:14px;font-weight:700;color:var(--g-gray-900);flex:1;}
+.ds-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--comfort-light);color:var(--comfort);}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.metric-item{padding:14px 16px;border-bottom:1px solid var(--g-gray-100);border-right:1px solid var(--g-gray-100);}
+.metric-item:nth-child(even){border-right:none;}
+.metric-item:nth-child(n+3){border-bottom:none;}
+.metric-label{font-size:11px;color:var(--g-gray-500);margin-bottom:4px;font-weight:500;}
+.metric-val{font-size:18px;font-weight:700;color:var(--g-gray-900);}
+.metric-note{font-size:11px;margin-top:2px;font-weight:500;}
+.score-bar-section{padding:14px 16px;}
+.score-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.score-row:last-child{margin-bottom:0;}
+.score-label{font-size:13px;color:var(--g-gray-700);width:110px;flex-shrink:0;}
+.score-bar-wrap{flex:1;height:8px;background:var(--g-gray-200);border-radius:99px;overflow:hidden;}
+.score-bar{height:100%;border-radius:99px;}
+.score-pct{font-size:12px;font-weight:700;color:var(--g-gray-700);width:36px;text-align:right;}
+.comparison-table{width:100%;border-collapse:collapse;}
+.comparison-table th{
+  font-size:11px;font-weight:700;color:var(--g-gray-500);text-transform:uppercase;
+  letter-spacing:0.05em;padding:10px 16px;text-align:left;background:var(--g-gray-50);
+}
+.comparison-table td{padding:10px 16px;font-size:13px;border-bottom:1px solid var(--g-gray-100);}
+.comparison-table tr:last-child td{border-bottom:none;}
+.td-good{color:var(--g-green);font-weight:600;}
+.td-bad{color:var(--g-red);font-weight:600;}
+.td-neutral{color:var(--g-gray-700);}
+.source-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;display:inline-block;}
+.src-sensor{background:#E3F2FD;color:#1565C0;}
+.src-community{background:var(--g-yellow-light);color:var(--g-orange);}
+.src-historical{background:var(--g-green-light);color:var(--g-green);}
+
+/* ── MAP PATHS ── */
+.route-path{stroke-dasharray:6 4;stroke-dashoffset:100;animation:none;}
+.route-path.fastest{stroke:#1A73E8;}
+.route-path.fuel{stroke:#0F9D58;}
+.route-path.comfort{stroke:#00897B;}
+.route-path.active{animation:dashMove 20s linear infinite;}
+@keyframes dashMove{to{stroke-dashoffset:-200;}}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--g-gray-900);color:white;padding:10px 18px;border-radius:10px;
+  font-size:13px;font-weight:500;z-index:2000;white-space:nowrap;
+  transition:transform 0.3s ease;box-shadow:var(--shadow-lg);
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── ANNOTATION PANEL ── */
+.annotation{flex:1;color:white;min-width:0;}
+.ann-title{font-size:26px;font-weight:700;margin-bottom:4px;letter-spacing:-0.3px;}
+.ann-sub{font-size:14px;color:rgba(255,255,255,0.55);margin-bottom:22px;}
+.ann-card{background:rgba(255,255,255,0.07);border-radius:14px;padding:16px 20px;margin-bottom:14px;border:1px solid rgba(255,255,255,0.10);}
+.ann-card-title{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:12px;}
+.screen-nav-btns{display:flex;flex-direction:column;gap:6px;}
+.snb{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;
+  background:rgba(255,255,255,0.06);border-radius:10px;border:1.5px solid rgba(255,255,255,0.10);
+  cursor:pointer;transition:all 0.2s;color:white;
+}
+.snb:hover{background:rgba(0,137,123,0.20);border-color:var(--comfort);}
+.snb.cur{background:rgba(0,137,123,0.25);border-color:var(--comfort);}
+.snb-icon{font-size:22px;width:30px;text-align:center;}
+.snb-label{font-size:14px;font-weight:600;}
+.snb-desc{font-size:11.5px;color:rgba(255,255,255,0.50);margin-top:1px;}
+.flow-steps{display:flex;flex-direction:column;gap:10px;}
+.flow-step{display:flex;gap:12px;}
+.fs-num{
+  width:26px;height:26px;border-radius:50%;background:var(--comfort);
+  color:white;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fs-text{font-size:13px;color:rgba(255,255,255,0.80);line-height:1.5;}
+.fs-text strong{color:white;}
+.data-pills{display:flex;flex-wrap:wrap;gap:6px;}
+.data-pill{
+  display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.08);
+  border-radius:20px;padding:5px 12px;font-size:12px;color:rgba(255,255,255,0.80);
+  border:1px solid rgba(255,255,255,0.12);
+}
+</style>
+</head>
+<body>
+
+<div class="outer">
+<!-- PHONE -->
+<div class="phone-wrap">
+  <div class="phone">
+    <div class="phone-top-bar">
+      <div class="status-time">9:41</div>
+      <div class="status-icons"><span>📶</span><span>🔋</span></div>
+    </div>
+
+    <!-- ═══ SCREEN 1: HOME MAP ═══ -->
+    <div class="screen active" id="s-home">
+      <div class="map-bg">
+        <svg class="map-svg" viewBox="0 0 390 776" xmlns="http://www.w3.org/2000/svg">
+          <!-- road grid -->
+          <rect fill="#E8E0D0" width="390" height="776"/>
+          <!-- Main roads -->
+          <rect x="0" y="120" width="390" height="32" fill="#FFFFFF" rx="2"/>
+          <rect x="0" y="280" width="390" height="24" fill="#FFFFFF" rx="2"/>
+          <rect x="0" y="460" width="390" height="28" fill="#FFFFFF" rx="2"/>
+          <rect x="60" y="0" width="28" height="776" fill="#FFFFFF" rx="2"/>
+          <rect x="200" y="0" width="20" height="776" fill="#FFFFFF" rx="2"/>
+          <rect x="310" y="0" width="24" height="776" fill="#FFFFFF" rx="2"/>
+          <!-- road lines -->
+          <line x1="0" y1="136" x2="390" y2="136" stroke="#DADCE0" stroke-width="1" stroke-dasharray="20,15"/>
+          <line x1="0" y1="292" x2="390" y2="292" stroke="#DADCE0" stroke-width="1" stroke-dasharray="20,15"/>
+          <!-- Green areas -->
+          <rect x="90" y="160" width="100" height="100" fill="#C8E6C9" rx="8"/>
+          <rect x="220" y="310" width="80" height="120" fill="#C8E6C9" rx="8"/>
+          <!-- Buildings -->
+          <rect x="94" y="164" width="92" height="92" fill="#A5D6A7" rx="4"/>
+          <rect x="224" y="314" width="72" height="112" fill="#A5D6A7" rx="4"/>
+          <rect x="130" y="340" width="60" height="80" fill="#E0E0E0" rx="4"/>
+          <rect x="240" y="160" width="50" height="80" fill="#E0E0E0" rx="4"/>
+          <rect x="320" y="160" width="50" height="100" fill="#EEEEEE" rx="4"/>
+          <!-- Location pin (origin) -->
+          <circle cx="200" cy="400" r="10" fill="#1A73E8"/>
+          <circle cx="200" cy="400" r="6" fill="white"/>
+          <!-- Destination pin -->
+          <path d="M320 200 L320 220 L313 213 L320 220 L327 213 L320 220 Z" fill="#D93025"/>
+          <circle cx="320" cy="195" r="12" fill="#D93025"/>
+          <circle cx="320" cy="195" r="5" fill="white"/>
+          <!-- Comfort label -->
+          <rect x="20" y="490" width="140" height="28" rx="14" fill="#00897B"/>
+          <text x="90" y="509" text-anchor="middle" font-family="Google Sans" font-size="12" font-weight="600" fill="white">🚗 Comfort Route</text>
+        </svg>
+      </div>
+      <div class="gm-topbar">
+        <div class="gm-search" onclick="goToRoutes()">
+          <span style="font-size:18px;">🔍</span>
+          <div class="gm-search-text">Search here</div>
+          <span style="font-size:16px;">🎤</span>
+        </div>
+        <div class="gm-avatar">A</div>
+      </div>
+      <div class="home-pills">
+        <div class="pill" onclick="goToRoutes()"><span class="pill-icon">🏠</span> Home</div>
+        <div class="pill" onclick="goToRoutes()"><span class="pill-icon">💼</span> Work</div>
+        <div class="pill" onclick="goToRoutes()"><span class="pill-icon">⛽</span> Gas</div>
+        <div class="pill" onclick="goToRoutes()"><span class="pill-icon">🛒</span> Grocery</div>
+        <div class="pill" onclick="goToDetail()"><span class="pill-icon">🚗</span> Comfort</div>
+      </div>
+      <div class="fab-layers">🗺️</div>
+      <div class="home-suggested">
+        <div class="drag-handle"></div>
+        <div class="suggested-title">SUGGESTED FOR YOU</div>
+        <div class="place-row" onclick="goToRoutes()">
+          <div class="place-icon">🏢</div>
+          <div><div class="place-name">Office – Cyber City</div><div class="place-dist">8.2 km · 29 min via Comfort Route</div></div>
+        </div>
+        <div class="place-row" onclick="goToRoutes()">
+          <div class="place-icon">🏠</div>
+          <div><div class="place-name">Home – Sector 14</div><div class="place-dist">5.4 km · 18 min via Fastest Route</div></div>
+        </div>
+        <div class="place-row" onclick="goToRoutes()">
+          <div class="place-icon">🛒</div>
+          <div><div class="place-name">D-Mart – Nearest</div><div class="place-dist">3.1 km · 12 min</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SCREEN 2: ROUTE OPTIONS ═══ -->
+    <div class="screen" id="s-routes">
+      <div class="route-topbar">
+        <div class="route-back-row">
+          <button class="back-btn" onclick="goTo('s-home')">←</button>
+          <div class="route-input-stack">
+            <div class="route-input-row">
+              <div class="ri-dot origin"></div>
+              <div class="ri-text">Your Location</div>
+            </div>
+            <div class="route-input-row">
+              <div class="ri-dot dest"></div>
+              <div class="ri-text">Office – Cyber City</div>
+              <button class="ri-x">✕</button>
+            </div>
+          </div>
+          <span style="font-size:22px;cursor:pointer;color:var(--g-gray-500);">⇄</span>
+        </div>
+        <div class="transport-tabs">
+          <div class="transport-tab active"><div class="transport-tab-icon">🚗</div>Drive</div>
+          <div class="transport-tab"><div class="transport-tab-icon">🚇</div>Transit</div>
+          <div class="transport-tab"><div class="transport-tab-icon">🚶</div>Walk</div>
+          <div class="transport-tab"><div class="transport-tab-icon">🚲</div>Bike</div>
+          <div class="transport-tab"><div class="transport-tab-icon">✈️</div>Flights</div>
+        </div>
+      </div>
+      <div class="map-bg" style="flex:1;">
+        <svg class="map-svg" viewBox="0 0 390 400" xmlns="http://www.w3.org/2000/svg">
+          <rect fill="#E8E0D0" width="390" height="400"/>
+          <rect x="0" y="80" width="390" height="20" fill="#FFFFFF"/>
+          <rect x="0" y="200" width="390" height="16" fill="#FFFFFF"/>
+          <rect x="0" y="310" width="390" height="18" fill="#FFFFFF"/>
+          <rect x="60" y="0" width="18" height="400" fill="#FFFFFF"/>
+          <rect x="200" y="0" width="14" height="400" fill="#FFFFFF"/>
+          <rect x="310" y="0" width="16" height="400" fill="#FFFFFF"/>
+          <rect x="100" y="100" width="80" height="80" fill="#C8E6C9" rx="6"/>
+          <rect x="220" y="120" width="70" height="60" fill="#E0E0E0" rx="4"/>
+          <!-- Route A: Fastest (blue, top) -->
+          <path d="M 60 350 L 60 200 L 200 200 L 200 80 L 310 80" stroke="#1A73E8" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Route B: Fuel (green, middle) -->
+          <path d="M 60 350 L 60 260 L 150 260 L 150 140 L 260 140 L 310 80" stroke="#0F9D58" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 5"/>
+          <!-- Route C: Comfort (teal, scenic) -->
+          <path d="M 60 350 L 60 310 L 200 310 L 200 200 L 280 200 L 310 80" stroke="#00897B" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Origin pin -->
+          <circle cx="60" cy="350" r="8" fill="#1A73E8"/>
+          <circle cx="60" cy="350" r="4" fill="white"/>
+          <!-- Dest pin -->
+          <circle cx="310" cy="80" r="12" fill="#D93025"/>
+          <circle cx="310" cy="80" r="5" fill="white"/>
+          <!-- Road quality markers (potholes on route A) -->
+          <circle cx="130" cy="200" r="5" fill="#F9AB00" opacity="0.9"/>
+          <circle cx="170" cy="200" r="4" fill="#D93025" opacity="0.8"/>
+          <text x="140" y="170" font-family="Google Sans" font-size="10" fill="#D93025" font-weight="600">⚠️ Poor road</text>
+          <!-- Comfort label -->
+          <rect x="180" y="290" width="90" height="18" rx="9" fill="#00897B"/>
+          <text x="225" y="303" text-anchor="middle" font-family="Google Sans" font-size="10" font-weight="600" fill="white">✅ Comfort Route</text>
+          <!-- Route labels -->
+          <text x="120" y="192" font-family="Google Sans" font-size="9" fill="#1A73E8" font-weight="600">Route A</text>
+          <text x="270" y="190" font-family="Google Sans" font-size="9" fill="#00897B" font-weight="600">Route C</text>
+        </svg>
+      </div>
+      <div class="route-panel">
+        <div class="rp-drag"></div>
+        <div class="rp-title-row">
+          <div class="rp-title">Route Options</div>
+          <div class="rp-options-link" onclick="goToDetail()">Comfort details ›</div>
+        </div>
+
+        <!-- FASTEST -->
+        <div class="route-card" id="card-fastest" onclick="selectRoute('fastest')">
+          <div class="rc-header">
+            <div class="rc-icon">⚡</div>
+            <div class="rc-label" style="color:var(--g-blue);">Fastest Route</div>
+            <div class="rc-badge rc-badge-fastest">Recommended</div>
+          </div>
+          <div class="rc-body">
+            <div class="rc-time-row">
+              <div class="rc-time">25</div>
+              <div class="rc-time-unit">min</div>
+              <div class="rc-eta" style="margin-left:auto;">Arrive 10:06 AM</div>
+            </div>
+            <div class="rc-detail-row">
+              <span class="rc-chip chip-blue">📏 8.2 km</span>
+              <span class="rc-chip chip-red">⚠️ Poor road ahead</span>
+              <span class="rc-chip chip-yellow">🚦 Heavy traffic</span>
+            </div>
+            <div class="rc-road-quality">
+              <div class="rq-label">Road Quality Score</div>
+              <div class="rq-bar-wrap"><div class="rq-bar" style="width:32%;background:var(--g-red);"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FUEL EFFICIENT -->
+        <div class="route-card" id="card-fuel" onclick="selectRoute('fuel')">
+          <div class="rc-header">
+            <div class="rc-icon">⛽</div>
+            <div class="rc-label" style="color:var(--g-green);">Fuel-Efficient Route</div>
+            <div class="rc-badge rc-badge-fuel">Saves fuel</div>
+          </div>
+          <div class="rc-body">
+            <div class="rc-time-row">
+              <div class="rc-time">32</div>
+              <div class="rc-time-unit">min</div>
+              <div class="rc-eta" style="margin-left:auto;">Arrive 10:13 AM</div>
+            </div>
+            <div class="rc-detail-row">
+              <span class="rc-chip chip-green">📏 9.1 km</span>
+              <span class="rc-chip chip-green">⛽ Save ~12%</span>
+              <span class="rc-chip chip-yellow">⚠️ Some bumps</span>
+            </div>
+            <div class="rc-road-quality">
+              <div class="rq-label">Road Quality Score</div>
+              <div class="rq-bar-wrap"><div class="rq-bar" style="width:56%;background:var(--g-yellow);"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COMFORT ROUTE ★ NEW ★ -->
+        <div class="route-card comfort-card selected" id="card-comfort" onclick="selectRoute('comfort')">
+          <div class="rc-header">
+            <div class="rc-icon">🚗</div>
+            <div class="rc-label" style="color:var(--comfort);">Comfort Route</div>
+            <div class="rc-badge rc-badge-comfort">✅ Smooth &amp; Safe<span class="rc-badge-new">★ NEW</span></div>
+          </div>
+          <div class="rc-body">
+            <div class="rc-time-row">
+              <div class="rc-time" style="color:var(--comfort);">29</div>
+              <div class="rc-time-unit">min</div>
+              <div class="rc-eta" style="margin-left:auto;">Arrive 10:10 AM</div>
+            </div>
+            <div class="rc-detail-row">
+              <span class="rc-chip chip-comfort">📏 9.8 km</span>
+              <span class="rc-chip chip-comfort">🛣️ Wider roads</span>
+              <span class="rc-chip chip-comfort">🌧️ Safe in rain</span>
+            </div>
+            <div class="rc-comfort-details">
+              <div class="rcd-item">✅ No potholes detected</div>
+              <div class="rcd-item">✅ Well-lit roads</div>
+              <div class="rcd-item">✅ Lower accident risk</div>
+              <div class="rcd-item">✅ Smooth surface</div>
+            </div>
+            <div class="rc-road-quality" style="margin-top:10px;">
+              <div class="rq-label">Road Quality Score</div>
+              <div class="rq-bar-wrap"><div class="rq-bar" style="width:88%;background:var(--comfort);"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="start-btn-row">
+          <button class="start-btn comfort-start" id="startBtn" onclick="startNav()">▶ Start Comfort Route</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SCREEN 3: NAVIGATION ═══ -->
+    <div class="screen" id="s-nav">
+      <div class="map-bg" style="flex:1;">
+        <svg class="map-svg" viewBox="0 0 390 560" xmlns="http://www.w3.org/2000/svg">
+          <rect fill="#1a1a2a" width="390" height="560"/>
+          <rect x="0" y="160" width="390" height="28" fill="#2D3A42"/>
+          <rect x="0" y="290" width="390" height="22" fill="#2D3A42"/>
+          <rect x="80" y="0" width="24" height="560" fill="#2D3A42"/>
+          <rect x="220" y="0" width="18" height="560" fill="#2D3A42"/>
+          <rect x="320" y="0" width="20" height="560" fill="#2D3A42"/>
+          <!-- Highlighted comfort route -->
+          <path d="M 80 560 L 80 290 L 220 290 L 220 160 L 320 160" stroke="#00897B" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Progress (driven portion) -->
+          <path d="M 80 560 L 80 420" stroke="#4DD0E1" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <!-- Arrow head / car position -->
+          <circle cx="80" cy="410" r="14" fill="#00897B"/>
+          <text x="80" y="416" text-anchor="middle" font-size="16">🚗</text>
+          <!-- Destination -->
+          <circle cx="320" cy="160" r="14" fill="#D93025"/>
+          <circle cx="320" cy="160" r="6" fill="white"/>
+          <!-- Distance marker -->
+          <rect x="140" y="250" width="70" height="22" rx="11" fill="rgba(0,137,123,0.85)"/>
+          <text x="175" y="265" text-anchor="middle" font-family="Google Sans" font-size="11" font-weight="600" fill="white">5.2 km left</text>
+          <!-- Turn indicator -->
+          <rect x="20" y="180" width="50" height="50" rx="8" fill="rgba(0,0,0,0.7)"/>
+          <text x="45" y="212" text-anchor="middle" font-size="22">↑</text>
+        </svg>
+      </div>
+      <div class="nav-top-bar">
+        <div class="nav-direction-icon">↰</div>
+        <div class="nav-instruction">
+          <div class="nav-inst-main">Turn left onto MG Road</div>
+          <div class="nav-inst-sub">Then continue for 2.1 km</div>
+        </div>
+        <div class="nav-dist">1.2 km</div>
+      </div>
+      <div class="comfort-active-bar">
+        <div class="cab-icon">🛣️</div>
+        <div class="cab-text">Comfort Route Active — Smooth roads ahead</div>
+        <div class="cab-score">Quality 88%</div>
+      </div>
+      <div class="nav-bottom">
+        <div class="nav-eta-row">
+          <div>
+            <div class="nav-eta-main">10:10 AM</div>
+            <div class="nav-eta-sub">29 min · 9.8 km remaining</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:13px;color:var(--comfort);font-weight:600;">🛣️ Smooth road</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">+4 min vs fastest</div>
+          </div>
+        </div>
+        <div class="nav-info-chips">
+          <div class="nav-chip">⚡ 5.2 km left</div>
+          <div class="nav-chip">🌧️ Rain-safe route</div>
+          <div class="nav-chip">✅ No potholes</div>
+        </div>
+        <div class="nav-actions">
+          <button class="nav-action-btn"><span class="nav-action-btn-icon">🔇</span>Mute</button>
+          <button class="nav-action-btn" onclick="showToast('Overview mode enabled')"><span class="nav-action-btn-icon">🗺️</span>Overview</button>
+          <button class="nav-action-btn" onclick="showToast('Sharing ETA...')"><span class="nav-action-btn-icon">📤</span>Share ETA</button>
+          <button class="nav-action-btn" onclick="goToDetail()"><span class="nav-action-btn-icon">📊</span>Route info</button>
+        </div>
+        <button class="nav-exit-btn" onclick="goTo('s-routes')">✕ Exit Navigation</button>
+      </div>
+    </div>
+
+    <!-- ═══ SCREEN 4: COMFORT DETAIL ═══ -->
+    <div class="screen" id="s-detail">
+      <div class="detail-header">
+        <button class="back-btn" onclick="goBack()">←</button>
+        <div>
+          <div class="detail-title">🚗 Comfort Route — Details</div>
+          <div class="detail-sub">Your Location → Office Cyber City</div>
+        </div>
+      </div>
+      <div class="detail-body">
+
+        <div class="detail-section">
+          <div class="ds-head">
+            <div style="font-size:20px;">📊</div>
+            <div class="ds-title">Route at a Glance</div>
+            <div class="ds-badge">★ Comfort</div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric-item">
+              <div class="metric-label">Duration</div>
+              <div class="metric-val" style="color:var(--comfort);">29 min</div>
+              <div class="metric-note" style="color:var(--g-gray-500);">+4 vs fastest</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Distance</div>
+              <div class="metric-val">9.8 km</div>
+              <div class="metric-note" style="color:var(--g-gray-500);">via NH-48</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Road Quality</div>
+              <div class="metric-val" style="color:var(--comfort);">88/100</div>
+              <div class="metric-note" style="color:var(--g-green);">Excellent</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Safety Score</div>
+              <div class="metric-val" style="color:var(--g-green);">91/100</div>
+              <div class="metric-note" style="color:var(--g-green);">Very Safe</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="ds-head">
+            <div style="font-size:20px;">🛣️</div>
+            <div class="ds-title">Road Quality Breakdown</div>
+          </div>
+          <div class="score-bar-section">
+            <div class="score-row">
+              <div class="score-label">Pothole-free</div>
+              <div class="score-bar-wrap"><div class="score-bar" style="width:92%;background:var(--comfort);"></div></div>
+              <div class="score-pct" style="color:var(--comfort);">92%</div>
+            </div>
+            <div class="score-row">
+              <div class="score-label">Surface smooth</div>
+              <div class="score-bar-wrap"><div class="score-bar" style="width:88%;background:var(--g-blue);"></div></div>
+              <div class="score-pct" style="color:var(--g-blue);">88%</div>
+            </div>
+            <div class="score-row">
+              <div class="score-label">Road width</div>
+              <div class="score-bar-wrap"><div class="score-bar" style="width:85%;background:var(--g-green);"></div></div>
+              <div class="score-pct" style="color:var(--g-green);">85%</div>
+            </div>
+            <div class="score-row">
+              <div class="score-label">Street lighting</div>
+              <div class="score-bar-wrap"><div class="score-bar" style="width:90%;background:var(--g-yellow);"></div></div>
+              <div class="score-pct" style="color:var(--g-orange);">90%</div>
+            </div>
+            <div class="score-row">
+              <div class="score-label">Weather safety</div>
+              <div class="score-bar-wrap"><div class="score-bar" style="width:95%;background:var(--comfort);"></div></div>
+              <div class="score-pct" style="color:var(--comfort);">95%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="ds-head">
+            <div style="font-size:20px;">⚖️</div>
+            <div class="ds-title">Route Comparison</div>
+          </div>
+          <table class="comparison-table">
+            <thead>
+              <tr><th>Factor</th><th>⚡ Fastest</th><th>🚗 Comfort</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Time</td><td class="td-good">25 min</td><td class="td-neutral">29 min</td></tr>
+              <tr><td>Road quality</td><td class="td-bad">32/100 ⚠️</td><td class="td-good">88/100 ✅</td></tr>
+              <tr><td>Potholes</td><td class="td-bad">7 detected</td><td class="td-good">0 detected</td></tr>
+              <tr><td>Safety score</td><td class="td-bad">61/100</td><td class="td-good">91/100</td></tr>
+              <tr><td>Road width</td><td class="td-bad">Narrow lanes</td><td class="td-good">4-lane wide</td></tr>
+              <tr><td>Rain-safe</td><td class="td-bad">No ⚠️</td><td class="td-good">Yes ✅</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="detail-section">
+          <div class="ds-head">
+            <div style="font-size:20px;">🤖</div>
+            <div class="ds-title">AI Data Sources</div>
+          </div>
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span>📱</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--g-gray-900);">Smartphone Sensors</div><div style="font-size:11px;color:var(--g-gray-500);">2.3M anonymous trips analysed this month</div></div>
+              <span class="source-badge src-sensor">Sensor</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span>👥</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--g-gray-900);">Community Reports</div><div style="font-size:11px;color:var(--g-gray-500);">1,240 pothole & road reports last 7 days</div></div>
+              <span class="source-badge src-community">Community</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span>📈</span>
+              <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--g-gray-900);">Historical Patterns</div><div style="font-size:11px;color:var(--g-gray-500);">18 months of driving data for this corridor</div></div>
+              <span class="source-badge src-historical">Historical</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:0 0 20px;">
+          <button onclick="goTo('s-routes');selectRoute('comfort')" style="width:100%;background:var(--comfort);color:white;border:none;border-radius:28px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font);box-shadow:0 4px 14px rgba(0,137,123,0.35);">🚗 Start Comfort Route</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<!-- ANNOTATION PANEL -->
+<div class="annotation">
+  <div class="ann-title">🚗 Comfort Route</div>
+  <div class="ann-sub">Google Maps Feature Proposal · Product Manager Wireframe</div>
+
+  <div class="ann-card">
+    <div class="ann-card-title">Navigate Screens</div>
+    <div class="screen-nav-btns">
+      <div class="snb cur" id="snb-home" onclick="goTo('s-home');setSNB('snb-home')">
+        <div class="snb-icon">🏠</div>
+        <div><div class="snb-label">Home Map</div><div class="snb-desc">Default map with Comfort pill shortcut</div></div>
+      </div>
+      <div class="snb" id="snb-routes" onclick="goTo('s-routes');setSNB('snb-routes')">
+        <div class="snb-icon">🗺️</div>
+        <div><div class="snb-label">Route Selection</div><div class="snb-desc">3 routes: Fastest, Fuel, Comfort — tap to compare</div></div>
+      </div>
+      <div class="snb" id="snb-nav" onclick="startNav();setSNB('snb-nav')">
+        <div class="snb-icon">▶️</div>
+        <div><div class="snb-label">Navigation View</div><div class="snb-desc">Turn-by-turn with comfort indicators</div></div>
+      </div>
+      <div class="snb" id="snb-detail" onclick="goToDetail();setSNB('snb-detail')">
+        <div class="snb-icon">📊</div>
+        <div><div class="snb-label">Route Details</div><div class="snb-desc">Scores, comparison table, data sources</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ann-card">
+    <div class="ann-card-title">Feature Flow</div>
+    <div class="flow-steps">
+      <div class="flow-step"><div class="fs-num">1</div><div class="fs-text"><strong>Search destination</strong> — same as today. No new behaviour to learn</div></div>
+      <div class="flow-step"><div class="fs-num">2</div><div class="fs-text"><strong>Comfort Route appears</strong> alongside Fastest and Fuel-Efficient options with a "★ NEW" badge on first use</div></div>
+      <div class="flow-step"><div class="fs-num">3</div><div class="fs-text"><strong>Road quality score visible</strong> — bar chart on each card shows surface quality at a glance</div></div>
+      <div class="flow-step"><div class="fs-num">4</div><div class="fs-text"><strong>Start navigation</strong> — comfort bar stays visible while driving, showing quality score in real-time</div></div>
+      <div class="flow-step"><div class="fs-num">5</div><div class="fs-text"><strong>Detailed breakdown</strong> — tap "Route info" during nav for pothole count, safety score, and data sources</div></div>
+    </div>
+  </div>
+
+  <div class="ann-card">
+    <div class="ann-card-title">AI Data Sources</div>
+    <div class="data-pills">
+      <div class="data-pill">📱 Smartphone accelerometers</div>
+      <div class="data-pill">👥 Community pothole reports</div>
+      <div class="data-pill">📈 18 months driving history</div>
+      <div class="data-pill">🌧️ Weather risk models</div>
+      <div class="data-pill">🛰️ Satellite road imagery</div>
+      <div class="data-pill">🏛️ Municipal road data</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let prevScreen = 's-home';
+let selectedRoute = 'comfort';
+
+function goTo(id){
+  prevScreen = document.querySelector('.screen.active')?.id || 's-home';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goBack(){ goTo(prevScreen); }
+function goToRoutes(){ goTo('s-routes'); setSNB('snb-routes'); }
+function goToDetail(){ prevScreen = document.querySelector('.screen.active')?.id || 's-routes'; goTo('s-detail'); setSNB('snb-detail'); }
+function startNav(){ goTo('s-nav'); setSNB('snb-nav'); showToast('🚗 Comfort Route started — smooth roads ahead!'); }
+
+function setSNB(active){
+  document.querySelectorAll('.snb').forEach(b=>b.classList.remove('cur'));
+  const el = document.getElementById(active);
+  if(el) el.classList.add('cur');
+}
+
+function selectRoute(route){
+  selectedRoute = route;
+  ['fastest','fuel','comfort'].forEach(r=>{
+    document.getElementById('card-'+r)?.classList.remove('selected');
+  });
+  document.getElementById('card-'+route)?.classList.add('selected');
+  const btn = document.getElementById('startBtn');
+  const labels = {fastest:'⚡ Start Fastest Route', fuel:'⛽ Start Fuel-Efficient Route', comfort:'🚗 Start Comfort Route'};
+  const classes = {fastest:'start-btn',fuel:'start-btn',comfort:'start-btn comfort-start'};
+  if(btn){ btn.textContent=labels[route]; btn.className=classes[route]; }
+  const msgs = {fastest:'⚡ Fastest Route selected — 25 min',fuel:'⛽ Fuel-Efficient selected — saves 12% fuel',comfort:'🚗 Comfort Route selected — smooth roads!'};
+  showToast(msgs[route]);
+}
+
+let toastTimer;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
